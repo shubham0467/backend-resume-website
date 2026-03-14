@@ -1,0 +1,27 @@
+{
+  "name": "portfolio-ai-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@huggingface/inference": "^4.13.15",
+    "axiom": "^0.49.2",
+    "axios": "^1.13.6",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^8.0.2",
+    "pdf-parse": "^1.1.1",
+    "touch": "^3.1.1",
+    "ua-parser-js": "^2.0.9"
+  }
+}
