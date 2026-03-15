@@ -30,11 +30,20 @@ const pool = new Pool({
 /* -------- Email Setup -------- */
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587,          // use 587, not 465
+  secure: false,
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+    pass: process.env.EMAIL_PASS  // must be Gmail App Password
   }
+});
+
+transporter.verify((error, success) => {
+  if (error) console.log("SMTP error:", error);
+  else console.log("SMTP server ready");
 });
 
 /* -------- Load Resume -------- */
@@ -152,20 +161,14 @@ ${resumeText}`
 /* -------- Contact Form -------- */
 
 app.post("/contact", async (req, res) => {
-
   try {
-
     const { name, email, message } = req.body;
 
-    await pool.query(
-      `INSERT INTO contacts (name,email,message)
-       VALUES ($1,$2,$3)`,
-      [name, email, message]
-    );
-
+    // --- Send email first ---
     await transporter.sendMail({
-      from: email,
-      to: process.env.EMAIL_USER,
+      from: process.env.EMAIL_USER,  // must be your Gmail account
+      replyTo: email,                // visitor's email
+      to: process.env.EMAIL_USER,    // you receive the email
       subject: `Portfolio Message from ${name}`,
       html: `
         <h3>New Portfolio Contact</h3>
@@ -175,16 +178,23 @@ app.post("/contact", async (req, res) => {
       `
     });
 
+    console.log("Contact email sent successfully");
+
+    // --- Save to PostgreSQL only if email sent ---
+    await pool.query(
+      `INSERT INTO contacts (name,email,message)
+       VALUES ($1,$2,$3)`,
+      [name, email, message]
+    );
+
     res.json({ success: true });
 
   } catch (err) {
 
-    console.error("Email error:", err);
+    console.error("Contact error:", err);
 
-    res.status(500).json({ success: false });
-
+    res.status(500).json({ success: false, error: err.message });
   }
-
 });
 
 /* -------- Analytics -------- */
