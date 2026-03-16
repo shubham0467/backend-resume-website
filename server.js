@@ -148,11 +148,10 @@ ${resumeText}`
 app.post("/contact", async (req, res) => {
   try {
     const { name, email, message } = req.body;
-
-    await resend.emails.send({
-  from: "portfolio@zilailba.resend.app",  // verified sender by Resend
-  to: "palbro107@gmail.com",      // where you receive the message
-  replyTo: email,                          // visitor's email
+await resend.emails.send({
+  from: "onboarding@resend.dev",
+  to: "palbro107@gmail.com",
+  replyTo: email,
   subject: `Portfolio Message from ${name}`,
   html: `
     <h3>New Portfolio Contact</h3>
@@ -185,12 +184,13 @@ app.get("/analytics", async (req, res) => {
 
   try {
 
-    const result = await pool.query(
-      "SELECT * FROM visitors ORDER BY visit_time DESC"
-    );
+    const [result, uniqueResult] = await Promise.all([
+      pool.query("SELECT * FROM visitors ORDER BY visit_time DESC"),
+      pool.query("SELECT COUNT(DISTINCT ip) AS count FROM visitors")
+    ]);
 
     res.json({
-      totalVisitors: result.rows.length,
+      totalVisitors: parseInt(uniqueResult.rows[0].count),
       visits: result.rows
     });
 
@@ -208,16 +208,17 @@ app.get("/admin-analytics", async (req, res) => {
 
   const password = req.query.password;
 
-if (password !== process.env.ADMIN_PASSWORD){
-      return res.status(401).json({ error: "Unauthorized" });
+  if (password !== process.env.ADMIN_PASSWORD) {
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const result = await pool.query(
-    "SELECT * FROM visitors ORDER BY visit_time DESC"
-  );
+  const [result, uniqueResult] = await Promise.all([
+    pool.query("SELECT * FROM visitors ORDER BY visit_time DESC"),
+    pool.query("SELECT COUNT(DISTINCT ip) AS count FROM visitors")
+  ]);
 
   res.json({
-    totalVisitors: result.rows.length,
+    totalVisitors: parseInt(uniqueResult.rows[0].count),
     visits: result.rows
   });
 
