@@ -4,11 +4,15 @@ const express = require("express");
 const fs = require("fs");
 const pdfParse = require("pdf-parse");
 const cors = require("cors");
-const nodemailer = require("nodemailer");
 const axios = require("axios");
 const UAParser = require("ua-parser-js");
 const { HfInference } = require("@huggingface/inference");
 const { Pool } = require("pg");
+// At the top of server.js
+const {Resend}  = require("resend");
+
+// Initialize with your API key from .env
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const app = express();
 
@@ -25,25 +29,6 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
   max:5
-});
-
-/* -------- Email Setup -------- */
-
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,          // use 587, not 465
-  secure: false,
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS  // must be Gmail App Password
-  }
-});
-
-transporter.verify((error, success) => {
-  if (error) console.log("SMTP error:", error);
-  else console.log("SMTP server ready");
 });
 
 /* -------- Load Resume -------- */
@@ -164,23 +149,22 @@ app.post("/contact", async (req, res) => {
   try {
     const { name, email, message } = req.body;
 
-    // --- Send email first ---
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,  // must be your Gmail account
-      replyTo: email,                // visitor's email
-      to: process.env.EMAIL_USER,    // you receive the email
-      subject: `Portfolio Message from ${name}`,
-      html: `
-        <h3>New Portfolio Contact</h3>
-        <p><b>Name:</b> ${name}</p>
-        <p><b>Email:</b> ${email}</p>
-        <p>${message}</p>
-      `
-    });
+    await resend.emails.send({
+  from: "portfolio@zilailba.resend.app",  // verified sender by Resend
+  to: "palbro107@gmail.com",      // where you receive the message
+  replyTo: email,                          // visitor's email
+  subject: `Portfolio Message from ${name}`,
+  html: `
+    <h3>New Portfolio Contact</h3>
+    <p><b>Name:</b> ${name}</p>
+    <p><b>Email:</b> ${email}</p>
+    <p>${message}</p>
+  `
+});
 
-    console.log("Contact email sent successfully");
+    console.log("Contact email sent successfully via Resend");
 
-    // --- Save to PostgreSQL only if email sent ---
+    // --- Save to PostgreSQL ---
     await pool.query(
       `INSERT INTO contacts (name,email,message)
        VALUES ($1,$2,$3)`,
@@ -190,9 +174,7 @@ app.post("/contact", async (req, res) => {
     res.json({ success: true });
 
   } catch (err) {
-
     console.error("Contact error:", err);
-
     res.status(500).json({ success: false, error: err.message });
   }
 });
