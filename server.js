@@ -18,6 +18,7 @@ const app = express();
 
 app.use(express.json());
 app.use(cors());
+app.set("trust proxy", true);
 
 /* -------- HuggingFace -------- */
 
@@ -55,7 +56,8 @@ app.post("/track-visit", async (req, res) => {
 
   try {
 
-    const ip = req.ip === "::1" ? "8.8.8.8" : req.ip;
+    const forwarded = req.headers["x-forwarded-for"];
+    const ip = forwarded ? forwarded.split(",")[0].trim() : (req.ip === "::1" ? "8.8.8.8" : req.ip);
 
     let country = "Unknown";
 
@@ -148,7 +150,8 @@ ${resumeText}`
 app.post("/contact", async (req, res) => {
   try {
     const { name, email, message } = req.body;
-await resend.emails.send({
+
+ await resend.emails.send({
   from: "onboarding@resend.dev",
   to: "palbro107@gmail.com",
   replyTo: email,
